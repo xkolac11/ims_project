@@ -185,6 +185,8 @@ void Sim::StartSim(){
 }
 
 /** Methods for numerical integration **/
+
+/** one-step Euler **/
 void Euler::Integrate(){
     this->s.EvaluateAll();
     Print("%f ",STime);
@@ -194,10 +196,12 @@ void Euler::Integrate(){
     }
 }
 
+/** one-step RK4 **/
 void Runge_Kutta_4::Integrate(){
     //todo
 }
 
+/** multi-step Adams-Bashforth **/
 void Adams_Bashforth::Integrate(){
     //todo
 }
