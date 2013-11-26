@@ -6,6 +6,8 @@
 #include <stdbool.h>
 #include <iostream>
 
+#include <list>
+#define dlist std::list
 
 using namespace std;
 
@@ -13,9 +15,10 @@ using namespace std;
 
 extern FILE *out;
 extern bool out_to_close;
+extern double STime;
 
 void SetOut(const char *file);
-void Print(const char *str);
+void Print(const char *str, ...);
 
 /** class prototypes **/
 class Block;
@@ -30,6 +33,10 @@ class Mul;
 class Div;
 class UMin;
 class Integrator;
+class IntegrationMethod;
+class Euler;
+class Runge_Kutta_4;
+class Adams_Bashforth;
 class Sim;
 
 /** base class for all blocks
@@ -73,7 +80,7 @@ class Const : public Block{
 class OpBlock1 : public Block{
     Input in;
     public:
-        OpBlock1(Input i);
+        OpBlock1(Input i) : in(i) {}
         double iVal();
 };
 
@@ -81,11 +88,19 @@ class OpBlock1 : public Block{
 class OpBlock2 : public Block{
     Input in1, in2;
     public:
-        OpBlock2(Input i1, Input i2);
+        OpBlock2(Input i1, Input i2) : in1(i1), in2(i2) {}
         double iVal1();
         double iVal2();
 };
 
+
+/** overloading of operators, so they can be used with ooprands like
+    instance of Input class **/
+Input operator + (Input a, Input b);
+Input operator - (Input a, Input b);
+Input operator * (Input a, Input b);
+Input operator / (Input a, Input b);
+Input operator - (Input a);
 
 /** operation unary minus **/
 class UMin : public OpBlock1{
@@ -122,32 +137,86 @@ class Div : public OpBlock2{
         virtual double Val();
 };
 
-/** overloading of operators, so they can be used with ooprands like
-    instance of Input class **/
-Input operator + (Input a, input b);
-Input operator - (Input a, input b);
-Input operator * (Input a, input b);
-Input operator / (Input a, input b);
-Input operator - (Input a);
-
 /** block integrator, represents numeric integration **/
 class Integrator : public Block{
-    public:
+    private:
         double input_val;
         double output_val;
     protected:
         Input i;
         double init_val;
-    private:
+    public:
         Integrator(): i(0), init_val(0.0) {}
-        void Init();
         void Set(Input in, double in_val = 0);
         void Set(Integrator &integrator, double in_val = 0);
         double Get();
-        double Val();
         double IVal();
-        void EVal();
         void SetVal(double val);
+        void Init();
+        double Val();
+        void EVal();
+};
+
+/** main simulator class,
+    represents integrator container
+    has it's own integration method (one for all integrations in
+    one simulator)
+**/
+class Sim{
+    private:
+        double TStart;
+        double TEnd;
+        double TStep;
+        IntegrationMethod *IM;
+    public:
+        dlist<Integrator*> *IntegratorList;
+        dlist<Integrator*>::iterator iIterator;
+        Sim(){IntegratorList = new dlist<Integrator *>;}
+        void Method(IntegrationMethod *im); //set the integraton method
+        void Start(double value); //set start time
+        double GetStart(); //get start time
+        void End(double value); //set end time
+        double GetEnd(); //get end time
+        void Step(double value); //set step time
+        double GetStep(); //get step time
+        void Insert(Integrator *i); //insert integrator to list
+        void InitAll(); //initialize all
+        void EvaluateAll(); //evaluate all integrators
+        void StartSim(); //start simulation
+};
+
+/** classes for integration methods **/
+
+/** class IntegrationMethod, encapsulates
+    all numerical methods classes for integrations
+*/
+class IntegrationMethod{
+    public:
+        virtual void Integrate(void) = 0;
+};
+
+class Euler : public IntegrationMethod{
+    private:
+        Sim &s;
+    public:
+        Euler(Sim &sim) : s(sim){}
+        virtual void Integrate(void);
+};
+
+class Runge_Kutta_4 : public IntegrationMethod{
+    private:
+        Sim &s;
+    public:
+        Runge_Kutta_4(Sim &sim) : s(sim){}
+        virtual void Integrate(void);
+};
+
+class Adams_Bashforth : public IntegrationMethod{
+    private:
+        Sim &s;
+    public:
+        Adams_Bashforth(Sim &sim) : s(sim){}
+        virtual void Integrate(void);
 };
 
 #endif
