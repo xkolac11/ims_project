@@ -17,7 +17,9 @@ extern FILE *out;
 extern bool out_to_close;
 extern double STime;
 
-void SetOut(const char *file);
+/** global function prototypes **/
+void SetOut(const char *fd);
+void OpenOut();
 void Print(const char *str, ...);
 
 /** class prototypes **/

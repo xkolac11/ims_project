@@ -1,6 +1,7 @@
 #include "sim.hh"
 
 FILE *out = stdout;
+const char *out_name;
 bool out_to_close = false;
 double STime = 0.0;
 
@@ -8,17 +9,16 @@ using namespace std;
 
 void SetOut(const char *fd){
     if(fd != NULL){
-        out = fopen(fd, "w+");
-        if(out == NULL){
-            //failed to open file, use stdout
-            out = stdout;
-        }else{
-            //file opened successfuly, set the flag
-            out_to_close = true;
-        }
+        //SetOut could be called multiple times, use the last defined output file
+        out_name = fd;
+    }
+}
+
+void OpenOut(){
+    if((out = fopen(out_name, "w+")) != NULL){
+        out_to_close = true;
     }else{
-       //stdout
-       out = stdout;
+        out = stdout;
     }
 }
 
@@ -70,7 +70,7 @@ double Integrator::Get(){
 }
 
 double Integrator::Val(){
-    return this->output_val;
+    return output_val;
 }
 
 double Integrator::IVal(){
@@ -167,10 +167,19 @@ void Sim::EvaluateAll(){
 }
 
 void Sim::StartSim(){
+
+    // open the output file if SetOut was called
+    // at least once (opens last set file)
+    if(out_name != NULL){
+        OpenOut();
+    }
+
     STime = this->GetStart();
     this->InitAll();
-    STime = this->GetStart() + this->GetStep();
+    STime += this->GetStep();
+
     Print("\n");
+
     for(double t = STime; t < this->GetEnd(); t += this->GetStep()){
         this->IM->Integrate();
         Print("\n");
@@ -198,7 +207,80 @@ void Euler::Integrate(){
 
 /** one-step RK4 **/
 void Runge_Kutta_4::Integrate(){
-    //todo
+
+    int size = s.IntegratorList->size();
+	int index;
+	int i;
+	double step = s.GetStep();
+	double k1[size], k2[size], k3[size], k4[size], y[size]; // we need to store coefficients and default output values
+	double def_time = STime; // stores default simulation time
+
+	Print("%.3f ", STime);
+
+    //reset index
+    index = 0;
+
+	// save default output values
+	for(s.iIterator = s.IntegratorList->begin(); s.iIterator != s.IntegratorList->end(); s.iIterator++) {
+		y[index] = (*s.iIterator)->Val();
+		index++;
+	}
+	this->s.EvaluateAll();
+
+    //reset index
+    //cout << index << endl;
+    index = 0;
+
+	// k1 = h*f(t, y(t))
+	for(s.iIterator = s.IntegratorList->begin(); s.iIterator != s.IntegratorList->end(); s.iIterator++) {
+		k1[index] = step * (*s.iIterator)->Get();
+		(*s.iIterator)->SetVal(y[index] + k1[index] / 2);
+		index++;
+	}
+    this->s.EvaluateAll();
+
+    STime += step / 2;
+
+    //reset index
+    index = 0;
+
+	// k2 = h * f(t + h/2, y(t) + k1/2)
+	for(s.iIterator = s.IntegratorList->begin(); s.iIterator != s.IntegratorList->end(); s.iIterator++) {
+		k2[index] = step * (*s.iIterator)->Get();
+		(*s.iIterator)->SetVal(y[index] + k2[index] / 2);
+		index++;
+	}
+
+    //reset index
+    index = 0;
+
+	// time remains the same
+	s.EvaluateAll();
+	// k3 = h * f(t + h/2, y(t) + k2/2)
+	for(s.iIterator = s.IntegratorList->begin(); s.iIterator != s.IntegratorList->end(); s.iIterator++) {
+		k3[index] = step * (*s.iIterator)->Get();
+		(*s.iIterator)->SetVal(y[index] + k3[index]);
+		index++;
+	}
+
+	//reset index
+    index = 0;
+
+	STime = def_time + step;
+	s.EvaluateAll();
+	// k4 = h * f(t + h, y(t) + k3)
+	for(s.iIterator = s.IntegratorList->begin(); s.iIterator != s.IntegratorList->end(); s.iIterator++) {
+		k4[index] = step * (*s.iIterator)->Get();
+		// y(t+h) = y(t) + k1/6 + k2/3 + k3/3 + k4/6
+		(*s.iIterator)->SetVal(y[index] + k1[index]/6 + k2[index]/3 + k3[index]/3 + k4[index]/6);
+		Print("%.3f ", (*s.iIterator)->Val());
+		index++
+	}
+
+	STime = def_time;
+	Print("\n");
+
+
 }
 
 /** multi-step Adams-Bashforth **/

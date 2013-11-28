@@ -1,14 +1,17 @@
 #include "sim.hh"
 
 int main(){
+
     //SetOut("ex1.txt");
+    //SetOut("out.txt");
+    //SetOut("out_x.txt");
 
     Sim s;
     s.Start(0.0);
     s.End(30.0);
     s.Step(0.01);
 
-    s.Method(new Euler(s));
+    s.Method(new Runge_Kutta_4(s));
 
     Const sigma(10.0);
     Const lambda(24.0);
