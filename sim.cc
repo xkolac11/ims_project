@@ -4,6 +4,7 @@ FILE *out = stdout;
 const char *out_name;
 bool out_to_close = false;
 double STime = 0.0;
+int cnt = 1;
 
 using namespace std;
 
@@ -182,9 +183,11 @@ void Sim::StartSim(){
 
     for(double t = STime; t < this->GetEnd(); t += this->GetStep()){
         this->IM->Integrate();
+        cnt++;
         Print("\n");
         STime += this->GetStep();
     }
+    cnt = 1;
 
     // close file if the output file is set
     if(out_to_close == true){
@@ -199,6 +202,7 @@ void Sim::StartSim(){
 void Euler::Integrate(){
     this->s.EvaluateAll();
     Print("%f ",STime);
+
     for(this->s.iIterator = this->s.IntegratorList->begin(); this->s.iIterator != this->s.IntegratorList->end(); this->s.iIterator++){
         (*this->s.iIterator)->SetVal( (*this->s.iIterator)->Val() + ( s.GetStep() * (*this->s.iIterator)->Get() ) );
         Print("%f ",(*this->s.iIterator)->Val());
@@ -208,21 +212,24 @@ void Euler::Integrate(){
 /** one-step RK4 **/
 void Runge_Kutta_4::Integrate(){
 
-    int size = s.IntegratorList->size();
-	int index;
-	int i;
-	double step = s.GetStep();
-	double k1[size], k2[size], k3[size], k4[size], y[size]; // we need to store coefficients and default output values
-	double def_time = STime; // stores default simulation time
+    //index to access array
+	int index = 0;
+	//array for store default output values
+	double y[s.IntegratorList->size()];
+    // store actual simulation time to TemporaryTime variable
+	double TTime = STime;
 
-	Print("%.3f ", STime);
+    //two dimensional array k[i][j]
+    //i --> coeficient k'i+1' - k1/k2/k3/k4
+    //j --> index of integrator from list
+    //[i][j] --> value of cofficient for specified integrator
+    double k[3][s.IntegratorList->size()];
 
-    //reset index
-    index = 0;
+    Print("%f ", STime);
 
-	// save default output values
-	for(s.iIterator = s.IntegratorList->begin(); s.iIterator != s.IntegratorList->end(); s.iIterator++) {
-		y[index] = (*s.iIterator)->Val();
+	// store default values
+	for(this->s.iIterator = this->s.IntegratorList->begin(); this->s.iIterator != this->s.IntegratorList->end(); this->s.iIterator++) {
+		y[index] = (*this->s.iIterator)->Val();
 		index++;
 	}
 	this->s.EvaluateAll();
@@ -231,61 +238,170 @@ void Runge_Kutta_4::Integrate(){
     //cout << index << endl;
     index = 0;
 
-	// k1 = h*f(t, y(t))
-	for(s.iIterator = s.IntegratorList->begin(); s.iIterator != s.IntegratorList->end(); s.iIterator++) {
-		k1[index] = step * (*s.iIterator)->Get();
-		(*s.iIterator)->SetVal(y[index] + k1[index] / 2);
+	//k1 = h*f(t, y(t))
+	for(this->s.iIterator = this->s.IntegratorList->begin(); this->s.iIterator != this->s.IntegratorList->end(); this->s.iIterator++) {
+		k[0][index] = this->s.GetStep() * (*this->s.iIterator)->Get();
+		(*this->s.iIterator)->SetVal(y[index] + k[0][index] / 2);
 		index++;
 	}
     this->s.EvaluateAll();
 
-    STime += step / 2;
+    //set the time
+    STime += this->s.GetStep() / 2;
 
     //reset index
     index = 0;
 
-	// k2 = h * f(t + h/2, y(t) + k1/2)
-	for(s.iIterator = s.IntegratorList->begin(); s.iIterator != s.IntegratorList->end(); s.iIterator++) {
-		k2[index] = step * (*s.iIterator)->Get();
-		(*s.iIterator)->SetVal(y[index] + k2[index] / 2);
+	//k2 = h * f(t + h/2, y(t) + k1/2)
+	for(this->s.iIterator = this->s.IntegratorList->begin(); this->s.iIterator != this->s.IntegratorList->end(); this->s.iIterator++) {
+		k[1][index] = this->s.GetStep() * (*this->s.iIterator)->Get();
+		(*this->s.iIterator)->SetVal(y[index] + k[1][index] / 2);
 		index++;
 	}
+	this->s.EvaluateAll();
 
     //reset index
     index = 0;
 
-	// time remains the same
-	s.EvaluateAll();
-	// k3 = h * f(t + h/2, y(t) + k2/2)
-	for(s.iIterator = s.IntegratorList->begin(); s.iIterator != s.IntegratorList->end(); s.iIterator++) {
-		k3[index] = step * (*s.iIterator)->Get();
-		(*s.iIterator)->SetVal(y[index] + k3[index]);
+	//k3 = h * f(t + h/2, y(t) + k2/2)
+	for(this->s.iIterator = this->s.IntegratorList->begin(); this->s.iIterator != this->s.IntegratorList->end(); this->s.iIterator++) {
+		k[2][index] = this->s.GetStep() * (*this->s.iIterator)->Get();
+		(*this->s.iIterator)->SetVal(y[index] + k[2][index]);
 		index++;
 	}
+	this->s.EvaluateAll();
 
 	//reset index
     index = 0;
 
-	STime = def_time + step;
-	s.EvaluateAll();
-	// k4 = h * f(t + h, y(t) + k3)
-	for(s.iIterator = s.IntegratorList->begin(); s.iIterator != s.IntegratorList->end(); s.iIterator++) {
-		k4[index] = step * (*s.iIterator)->Get();
-		// y(t+h) = y(t) + k1/6 + k2/3 + k3/3 + k4/6
-		(*s.iIterator)->SetVal(y[index] + k1[index]/6 + k2[index]/3 + k3[index]/3 + k4[index]/6);
-		Print("%.3f ", (*s.iIterator)->Val());
-		index++
+    //set the time
+    STime += this->s.GetStep() / 2;
+
+	//k4 = h * f(t + h, y(t) + k3)
+	for(this->s.iIterator = this->s.IntegratorList->begin(); this->s.iIterator != this->s.IntegratorList->end(); this->s.iIterator++) {
+		k[3][index] = this->s.GetStep() * (*this->s.iIterator)->Get();
+		//y(t+h) = y(t) + k1/6 + k2/3 + k3/3 + k4/6
+		(*this->s.iIterator)->SetVal(y[index] + k[0][index]/6 + k[1][index]/3 + k[2][index]/3 + k[3][index]/6);
+		Print("%f ", (*this->s.iIterator)->Val());
+		index++;
 	}
 
-	STime = def_time;
-	Print("\n");
-
-
+    //time reset
+	STime = TTime;
 }
+
+/*
+
+#include <cstdlib>
+#include <stdio.h>
+#include <iostream>
+
+using namespace std;
+
+double adams_4(int step, double y, double h, double vysl_ad[]) {
+
+    double result, divisor, steps;
+    double bashforth[4];
+
+    switch (step) {
+        case 1:
+            // call Euler
+            break;
+
+        case 2:
+            bashforth[0] = 3.0;
+            bashforth[1] = -1.0;
+            divisor = 2.0;
+            steps = 2;
+            break;
+
+        case 3:
+            bashforth[0] = 23.0;
+            bashforth[1] = -16.0;
+            bashforth[2] = 5.0;
+            divisor = 12.0;
+            steps = 3;
+            break;
+
+        default:
+            bashforth[0] = 55.0;
+            bashforth[1] = -59.0;
+            bashforth[2] = 37.0;
+            bashforth[3] = -9.0;
+            divisor = 24.0;
+            steps = 4;
+            break;
+
+    }
+    int i;
+    int j = step;
+    double tmp;
+
+    for (i = 0; i < steps; i++, j--) {
+        tmp += bashforth[i] * vysl_ad[j];
+    }
+
+    result = y + (h / divisor) * tmp;
+    return result;
+}
+
+int main(int argc, char** argv) {
+
+
+
+    double bashforth[] = {30.0, 2.0, 3.0}; // predchozi vysledky
+    printf("%f \n", adams_4(4, 1.0, 1.0, bashforth));
+
+
+    return 0;
+}
+
+*/
 
 /** multi-step Adams-Bashforth **/
 void Adams_Bashforth::Integrate(){
     //todo
+
+    //double coeficients[] = {55.0, -59.0, 37.0, -9.0};
+    Print("%f ",STime);
+
+    switch(cnt){
+
+        case 1:
+            this->s.EvaluateAll();
+
+            for(this->s.iIterator = this->s.IntegratorList->begin(); this->s.iIterator != this->s.IntegratorList->end(); this->s.iIterator++){
+                (*this->s.iIterator)->SetVal( (*this->s.iIterator)->Val() + ( s.GetStep() * (*this->s.iIterator)->Get() ) );
+                (*this->s.iIterator)->results[0] = (*this->s.iIterator)->Val();
+                Print("%f ",(*this->s.iIterator)->Val());
+            }
+            break;
+
+        case 2:
+            this->s.EvaluateAll();
+            for(this->s.iIterator = this->s.IntegratorList->begin(); this->s.iIterator != this->s.IntegratorList->end(); this->s.iIterator++){
+                (*this->s.iIterator)->SetVal( (*this->s.iIterator)->Val() + ( s.GetStep() * (*this->s.iIterator)->Get() ) );
+                (*this->s.iIterator)->results[1] = (*this->s.iIterator)->Val();
+                Print("%f ",(*this->s.iIterator)->Val());
+            }
+            break;
+
+        case 3:
+            this->s.EvaluateAll();
+            for(this->s.iIterator = this->s.IntegratorList->begin(); this->s.iIterator != this->s.IntegratorList->end(); this->s.iIterator++){
+                (*this->s.iIterator)->SetVal( (*this->s.iIterator)->Val() + ( s.GetStep() * (*this->s.iIterator)->Get() ) );
+                (*this->s.iIterator)->results[2] = (*this->s.iIterator)->Val();
+                Print("%f ",(*this->s.iIterator)->Val());
+            }
+            break;
+
+        default:
+            this->s.EvaluateAll();
+            for(this->s.iIterator = this->s.IntegratorList->begin(); this->s.iIterator != this->s.IntegratorList->end(); this->s.iIterator++){
+                 (*this->s.iIterator)->SetVal( (*this->s.iIterator)->Val() + (this->s.GetStep()/24) * ( 55*(*this->s.iIterator)->Get() - 59*(*this->s.iIterator)->results[2] + 37*(*this->s.iIterator)->results[1] - 9*(*this->s.iIterator)->results[0] ) );
+                 Print("%f ",(*this->s.iIterator)->Val());
+            }
+    }
 }
 
 /** Methods of Aritmetical blocks **/

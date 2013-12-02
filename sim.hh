@@ -157,6 +157,7 @@ class Integrator : public Block{
         void Init();
         double Val();
         void EVal();
+        double results[3];
 };
 
 /** main simulator class,

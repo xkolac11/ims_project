@@ -18,6 +18,13 @@ ex2.o : ex2.cc
 ex2 : sim.o ex2.o
 	@${CC} ${CFLAGS} sim.o ex2.o -o ex2
 
+ex3.o : ex3.cc
+	@${CC} ${CFLAGS} -lsimlib -lm -c ex3.cc
+
+ex3 : ex3.o
+	@${CC} ${CFLAGS} -lsimlib -lm sim.o ex3.o -o ex3
+
+
 run:
 	./ex1
 	./ex2
