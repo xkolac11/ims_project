@@ -424,3 +424,8 @@ Input operator * (Input x, Input y){
 Input operator / (Input x, Input y){
     return new Div(x,y);
 }
+
+/** block time to operate with simulation time in examples **/
+double _Time::Val(){
+    return *_time;
+}

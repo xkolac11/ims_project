@@ -7,25 +7,30 @@ int main(){
 
     Sim s;
     s.Start(0.0);
-    s.End(30.0);
+    s.End(10.0);
     s.Step(0.01);
 
-    s.Method(new Runge_Kutta_4(s));
+    s.Method(new Adams_Bashforth(s));
 
-    Const sigma(10.0);
-    Const lambda(24.0);
-    Const b(2.0);
-    Const one(1.0);
+    Const a(3.0);
+	Const b(5.0);
+	Const c(8.0);
+	Const d(2.0);
+	_Time t(&STime);
+	Var y1, z2;
+	Integrator y, z1, z;
 
-    Integrator y1, y2, y3;
+	y1.Set((a*y - b*z + t)/c);
+	z2.Set((-z + b*y1)/d);
 
-    y1.Set(sigma*(y2-y1),1.0);
-    y2.Set((one + lambda -y3) *y1 -y2, 1.0);
-    y3.Set(y1*y2 - b*y3, 1.0);
+	y.Set((-a*y - b*z + t)/c, 1.0);
+	z1.Set((-z - b*y1)/d, 2.0);
+	z.Set(z1, 3.0);
 
-    s.Insert(&y1);
-    s.Insert(&y2);
-    s.Insert(&y3);
+	s.Insert(&y);
+	s.Insert(&z1);
+	s.Insert(&z);
 
-    s.StartSim();
+
+	s.StartSim();
 }

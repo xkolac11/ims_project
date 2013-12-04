@@ -40,6 +40,7 @@ class Euler;
 class Runge_Kutta_4;
 class Adams_Bashforth;
 class Sim;
+class _Time;
 
 /** base class for all blocks
     every block has it's own output value */
@@ -94,6 +95,8 @@ class OpBlock2 : public Block{
         double iVal1();
         double iVal2();
 };
+
+
 
 
 /** overloading of operators, so they can be used with ooprands like
@@ -220,6 +223,15 @@ class Adams_Bashforth : public IntegrationMethod{
     public:
         Adams_Bashforth(Sim &sim) : s(sim){}
         virtual void Integrate(void);
+};
+
+/** class to operate with simulation time in examples **/
+class _Time : public Block{
+    private:
+        double *_time;
+    public:
+        _Time(double *t) : _time(t){}
+        virtual double Val();
 };
 
 #endif

@@ -11,7 +11,7 @@ int main(){
     s.End(30.0);
     s.Step(0.01);
 
-    s.Method(new Adams_Bashforth(s));
+    s.Method(new Runge_Kutta_4(s));
 
     Const sigma(10.0);
     Const lambda(24.0);
